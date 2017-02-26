@@ -2,7 +2,8 @@ import random
 
 
 class Card(object):
-    """Represents a standard playing card.
+    """
+    Represents a standard playing card.
 
     Attributes:
       suit: integer 0-3
@@ -10,11 +11,13 @@ class Card(object):
     """
 
     suit_names = {"C": "Clubs", "D": "Diamonds", "H": "Hearts", "S": "Spades"}
-    value_names = {"S": "7", "E": "8", "N": "9", "T": "10", "J": "Jack", "Q": "Queen", "K": "King", "A": "Ace"}
+    value_names = {"S": "7", "E": "8", "N": "9", "T": "10",
+                   "J": "Jack", "Q": "Queen", "K": "King", "A": "Ace"}
 
     def __init__(self, suit, value):
         if not self.is_valid_card(suit, value):
-            raise ValueError("Invalid card definition, rank or suit is out of bound")
+            raise ValueError("Invalid card definition, "
+                             "rank or suit is out of bound")
         self.suit = suit
         self.value = value
 
@@ -115,7 +118,8 @@ class Deck(CardStack):
 
     def __init__(self):
         CardStack.__init__(self)
-        self.cards = [Card(i, j) for i in Card.suit_names for j in Card.value_names]
+        self.cards = [Card(i, j) for i in Card.suit_names
+                      for j in Card.value_names]
 
     def shuffle(self, seed=None):
         random.seed(seed)

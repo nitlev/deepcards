@@ -120,7 +120,7 @@ class Distributor:
     @staticmethod
     def give_n_cards(deck, player, n):
         for i in range(n):
-            player.get_new_card(deck.next_card())
+            player.add_card_to_hand(deck.next_card())
 
     @staticmethod
     def reveal_next_card(deck):
@@ -129,7 +129,7 @@ class Distributor:
 
     @staticmethod
     def give_card_to_player(card, player):
-        player.get_new_card(card)
+        player.add_card_to_hand(card)
 
     def distribute_remaining_cards_to_players(self, deck, players):
         for player in players:

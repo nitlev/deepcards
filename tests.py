@@ -163,7 +163,7 @@ class TestPlayer:
     def test_player_should_return_card_in_hand_when_chooses_card(self):
         player = Player()
         card = Card("C", "S")
-        player.get_new_card(card)
+        player.add_card_to_hand(card)
         chosen_card = player.choose_card(Trick(), 0)
         assert chosen_card in player.hand
 
@@ -172,7 +172,7 @@ class TestPlayer:
         cards = [Card("C", "S"), Card("D", "S"), Card("H", "S"), Card("S", "S"), Card("C", "E"), Card("D", "T"),
                  Card("H", "J"), Card("S", "Q")]
         for card in cards:
-            player.get_new_card(card)
+            player.add_card_to_hand(card)
         for suit in range(4):
             for card in player.get_trump_cards_in_hand(suit):
                 assert card.suit == suit
@@ -182,7 +182,7 @@ class TestPlayer:
         cards = [Card("C", "S"), Card("D", "S"), Card("H", "S"), Card("S", "S"), Card("C", "E"), Card("D", "T"),
                  Card("H", "J"), Card("S", "Q")]
         for card in cards:
-            player.get_new_card(card)
+            player.add_card_to_hand(card)
         for suit in range(4):
             for card in player.get_demanded_suit_cards_in_hand(suit):
                 assert card.suit == suit
@@ -191,7 +191,7 @@ class TestPlayer:
         player = Player()
         card = Card("C", "S")
         trick = Trick()
-        player.get_new_card(card)
+        player.add_card_to_hand(card)
         l = len(player.hand)
         player.play_card(card, trick)
         assert len(player.hand) == l - 1
@@ -200,7 +200,7 @@ class TestPlayer:
         player = Player()
         card = Card("C", "S")
         trick = Trick()
-        player.get_new_card(card)
+        player.add_card_to_hand(card)
         player.play(trick, 0)
         assert len(trick) == 1
 
@@ -331,15 +331,15 @@ class TestTrickEvaluator:
 
     def test_winner_should_return_correct_index_with_offset(self):
         trick1 = Trick(cards=[Card("C", "E"), Card("C", "T"), Card("C", "J"), Card("C", "Q")])
-        assert self.evaluator.winner(trick1, 1) == 3
+        assert self.evaluator.winner(trick1, who_started=1) == 3
         trick2 = Trick(cards=[Card("C", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])
-        assert self.evaluator.winner(trick2, 2) == 2
+        assert self.evaluator.winner(trick2, who_started=2) == 2
         trick3 = Trick(cards=[Card("D", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])
-        assert self.evaluator.winner(trick3, 3) == 0
+        assert self.evaluator.winner(trick3, who_started=3) == 0
         trick4 = Trick(cards=[Card("D", "E"), Card("C", "T"), Card("C", "J"), Card("H", "Q")])
-        assert self.evaluator.winner(trick4, 1) == 3
+        assert self.evaluator.winner(trick4, who_started=1) == 3
         trick5 = Trick(cards=[Card("D", "E"), Card("H", "T"), Card("S", "J"), Card("H", "Q")])
-        assert self.evaluator.winner(trick5, 3) == 3
+        assert self.evaluator.winner(trick5, who_started=3) == 3
 
 
 class TestReferee:

@@ -56,7 +56,7 @@ class Player:
     def chooses_to_start(self, card):
         return True
 
-    def get_new_card(self, card):
+    def add_card_to_hand(self, card):
         self.hand.add_card(card)
 
     def set_team_id(self, id):

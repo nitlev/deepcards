@@ -10,7 +10,7 @@ def main():
     trick_evaluator = TrickEvaluator()
     referee = Referee()
     game_night = GameNight(team0, team1, trick_evaluator,
-                           distributor, referee)
+                           distributor, referee, verbosity=1)
     commented_game_night = CommentedGameNight(game_night)
     commented_game_night.start()
     commented_game_night.play()

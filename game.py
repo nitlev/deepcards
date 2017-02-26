@@ -1,8 +1,70 @@
+from abc import abstractmethod
+
 from actors import GameCommentator, GameNightCommentator, Team
 from cards import Deck, Trick
 
 
-class Game:
+class AbstractGame(object):
+    """A game of belote"""
+
+    @abstractmethod
+    def play(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def play_one_turn(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def who_plays_now(self, i):
+        raise NotImplementedError
+
+    @abstractmethod
+    def distribute_cards_and_choose_trump(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def perform_first_distribution_and_reveal_card(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def first_round_calls(self, revealed_card):
+        raise NotImplementedError
+
+    @abstractmethod
+    def second_round_calls(self, revealed_card):
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_starting_team_from_player(self, player):
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_trump_suit(self, suit):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_team_by_id(self, team_id):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_other_team_by_id(self, team_id):
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluate_turn(self, trick):
+        raise NotImplementedError
+
+    @abstractmethod
+    def count_points(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self):
+        raise NotImplementedError
+
+
+class Game(AbstractGame):
     """A game of belote"""
 
     def __init__(self, game_id, team1: Team, team2: Team, deck, evaluator,
@@ -118,65 +180,111 @@ class Game:
             team.throw_away_won_cards()
 
 
-class CommentedGame(object):
+class CommentedGame(AbstractGame):
     def __init__(self, game):
         self.game = game
         self.commentator = GameCommentator()
         self.commentator.comment_start_of_game(self.game)
 
-    def distribute_cards_and_choose_trump(self):
-        self.game.distribute_cards_and_choose_trump()
-        self.commentator.comment_distribution(self)
+    def play(self):
+        for turn in range(8):
+            trick = self.play_one_turn()
+            winning_team = self.evaluate_turn(trick)
+            winning_team.get_cards(trick)
+            if turn == 7:  # Last Turn
+                winning_team.won_last_turn = True
+        return 0
 
     def play_one_turn(self):
-        self.commentator.comment_start_of_turn(self)
+        self.commentator.comment_start_of_turn(self.game)
         trick = self.game.play_one_turn()
-        self.commentator.comment_turn(self, trick)
+        self.commentator.comment_turn(self.game, trick)
         return trick
 
     def evaluate_turn(self, trick):
         winning_team = self.game.evaluate_turn(trick)
-        self.commentator.comment_end_of_turn(self)
+        self.commentator.comment_end_of_turn(self.game)
         return winning_team
 
     def count_points(self):
         self.game.count_points()
-        self.commentator.comment_end_of_game(self)
+        self.commentator.comment_end_of_game(self.game)
+
+    def distribute_cards_and_choose_trump(self):
+        self.game.distribute_cards_and_choose_trump()
+        self.commentator.comment_distribution(self.game)
+
+    def get_other_team_by_id(self, team_id):
+        self.game.get_other_team_by_id(team_id)
+
+    def set_starting_team_from_player(self, player):
+        self.game.set_starting_team_from_player(player)
+
+    def perform_first_distribution_and_reveal_card(self):
+        self.game.perform_first_distribution_and_reveal_card()
+
+    def second_round_calls(self, revealed_card):
+        self.game.second_round_calls(revealed_card)
+
+    def get_team_by_id(self, team_id):
+        self.game.get_team_by_id(team_id)
+
+    def set_trump_suit(self, suit):
+        self.game.set_trump_suit(suit)
+
+    def who_plays_now(self, i):
+        self.game.who_plays_now(i)
+
+    def close(self):
+        self.game.close()
+
+    def first_round_calls(self, revealed_card):
+        self.game.first_round_calls(revealed_card)
 
 
 class GameNight:
-    def __init__(self, team1, team2, evaluator, distributor, referee):
+    def __init__(self, team1, team2, evaluator, distributor, referee,
+                 verbosity):
         self.teams = [team1, team2]
         self.which_player_starts = 0
         self.evaluator = evaluator
         self.distributor = distributor
         self.referee = referee
         self.number_of_games_played = 0
-        self.game_type = Game
+        self.verbosity = verbosity
 
     def play(self):
-        while max([team.game_night_points for team in self.teams]) < 1000:
-            deck = Deck()
-            game = self.game_type(self.number_of_games_played, self.teams[0],
-                                  self.teams[1], deck, self.evaluator,
-                                  self.distributor, self.referee,
-                                  self.number_of_games_played % 4)
+        while not self.is_finished():
+            game = self.new_game()
             game.distribute_cards_and_choose_trump()
             game.play()
             game.count_points()
             game.close()
             self.number_of_games_played += 1
 
+    def is_finished(self):
+        return max([team.game_night_points for team in self.teams]) > 1000
+
+    def new_game(self):
+        deck = Deck()
+        game = Game(self.number_of_games_played, self.teams[0],
+                    self.teams[1], deck, self.evaluator,
+                    self.distributor, self.referee,
+                    self.number_of_games_played % 4)
+        if self.verbosity == 0:
+            return game
+        else:
+            return CommentedGame(game)
+
 
 class CommentedGameNight(object):
-    def __init__(self, game):
-        self.game = game
-        self.game_type = CommentedGame
+    def __init__(self, game_night):
+        self.game_night = game_night
         self.commentator = GameNightCommentator()
 
     def start(self):
-        self.commentator.introduce_game_night(self.game)
+        self.commentator.introduce_game_night(self.game_night)
 
     def play(self):
-        self.game.play()
-        self.commentator.comment_end_of_game_night(self.game)
+        self.game_night.play()
+        self.commentator.comment_end_of_game_night(self.game_night)

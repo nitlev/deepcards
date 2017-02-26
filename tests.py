@@ -427,7 +427,7 @@ class TestGameNightCommentator:
         evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game_night = GameNight(team1, team2, evaluator, distributor, referee)
+        self.game_night = GameNight(team1, team2, evaluator, distributor, referee, verbosity=1)
         self.commentator = GameNightCommentator(1)
 
     def test_commentator_should_introduce_game_night(self):

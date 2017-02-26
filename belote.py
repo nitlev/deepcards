@@ -1,6 +1,6 @@
 from actors import Player, Team
+from game import GameNight, CommentedGameNight
 from officials import TrickEvaluator, Referee, Distributor
-from game import CommentedGameNight
 
 
 def main():
@@ -9,10 +9,11 @@ def main():
     distributor = Distributor()
     trick_evaluator = TrickEvaluator()
     referee = Referee()
-    game_night = CommentedGameNight(team0, team1, trick_evaluator,
-                                    distributor, referee)
-    game_night.start()
-    game_night.play()
+    game_night = GameNight(team0, team1, trick_evaluator,
+                           distributor, referee)
+    commented_game_night = CommentedGameNight(game_night)
+    commented_game_night.start()
+    commented_game_night.play()
     print("Game finished")
 
 

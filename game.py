@@ -1,11 +1,12 @@
-from actors import GameCommentator, GameNightCommentator
+from actors import GameCommentator, GameNightCommentator, Team
 from cards import Deck, Trick
 
 
 class Game:
     """A game of belote"""
 
-    def __init__(self, game_id, team1, team2, deck, evaluator, distributor, referee, who_starts=0, seed=None):
+    def __init__(self, game_id, team1: Team, team2: Team, deck, evaluator,
+                 distributor, referee, who_starts=0, seed=None):
         self.id = game_id
         self.teams = {team1, team2}
         players = [team1.player1, team2.player1, team1.player2, team2.player2]
@@ -47,11 +48,13 @@ class Game:
             print("Game not played")
             self.played = False
         else:
-            self.distributor.distribute_remaining_cards_to_players(self.deck, self.players)
+            self.distributor.distribute_remaining_cards_to_players(self.deck,
+                                                                   self.players)
 
     def perform_first_distribution_and_reveal_card(self):
         self.distributor.shuffle(self.deck, self.seed)
-        self.distributor.distribute_five_cards_to_players(self.deck, self.players)
+        self.distributor.distribute_five_cards_to_players(self.deck,
+                                                          self.players)
         revealed_card = self.distributor.reveal_next_card(self.deck)
         return revealed_card
 
@@ -98,7 +101,8 @@ class Game:
         return [team for team in self.teams if team.id != team_id][0]
 
     def evaluate_turn(self, trick):
-        winner = self.evaluator.winner(trick, who_started=self.last_trick_winner)
+        winner = self.evaluator.winner(trick,
+                                       who_started=self.last_trick_winner)
         self.last_trick_winner = winner
         winning_player = self.players[winner]
         winning_team = self.get_team_by_id(winning_player.teamID)
@@ -114,29 +118,29 @@ class Game:
             team.throw_away_won_cards()
 
 
-class CommentedGame(Game):
-    def __init__(self, geam_id, team1, team2, deck, evaluator, distributor, referee, who_starts):
-        super(CommentedGame, self).__init__(geam_id, team1, team2, deck, evaluator, distributor, referee, who_starts)
+class CommentedGame(object):
+    def __init__(self, game):
+        self.game = game
         self.commentator = GameCommentator()
-        self.commentator.comment_start_of_game(self)
+        self.commentator.comment_start_of_game(self.game)
 
     def distribute_cards_and_choose_trump(self):
-        super(CommentedGame, self).distribute_cards_and_choose_trump()
+        self.game.distribute_cards_and_choose_trump()
         self.commentator.comment_distribution(self)
 
     def play_one_turn(self):
         self.commentator.comment_start_of_turn(self)
-        trick = super(CommentedGame, self).play_one_turn()
+        trick = self.game.play_one_turn()
         self.commentator.comment_turn(self, trick)
         return trick
 
     def evaluate_turn(self, trick):
-        winning_team = super(CommentedGame, self).evaluate_turn(trick)
+        winning_team = self.game.evaluate_turn(trick)
         self.commentator.comment_end_of_turn(self)
         return winning_team
 
     def count_points(self):
-        super(CommentedGame, self).count_points()
+        self.game.count_points()
         self.commentator.comment_end_of_game(self)
 
 
@@ -153,8 +157,10 @@ class GameNight:
     def play(self):
         while max([team.game_night_points for team in self.teams]) < 1000:
             deck = Deck()
-            game = self.game_type(self.number_of_games_played, self.teams[0], self.teams[1], deck, self.evaluator,
-                                  self.distributor, self.referee, self.number_of_games_played % 4)
+            game = self.game_type(self.number_of_games_played, self.teams[0],
+                                  self.teams[1], deck, self.evaluator,
+                                  self.distributor, self.referee,
+                                  self.number_of_games_played % 4)
             game.distribute_cards_and_choose_trump()
             game.play()
             game.count_points()
@@ -162,15 +168,15 @@ class GameNight:
             self.number_of_games_played += 1
 
 
-class CommentedGameNight(GameNight):
-    def __init__(self, team1, team2, evaluator, distributor, referee):
-        super(CommentedGameNight, self).__init__(team1, team2, evaluator, distributor, referee)
+class CommentedGameNight(object):
+    def __init__(self, game):
+        self.game = game
         self.game_type = CommentedGame
         self.commentator = GameNightCommentator()
 
     def start(self):
-        self.commentator.introduce_game_night(self)
+        self.commentator.introduce_game_night(self.game)
 
     def play(self):
-        super(CommentedGameNight, self).play()
-        self.commentator.comment_end_of_game_night(self)
+        self.game.play()
+        self.commentator.comment_end_of_game_night(self.game)

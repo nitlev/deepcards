@@ -1,0 +1,2 @@
+from .gamecommentator import GameCommentator
+from .roundcommentator import RoundCommentator

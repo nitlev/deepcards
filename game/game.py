@@ -1,7 +1,8 @@
 from cards import Deck
-from game import Round, CommentedRound
 from officials import Evaluator, Referee, Distributor
 from players import Team
+from .commented_round import CommentedRound
+from .round import Round
 
 
 class Game:

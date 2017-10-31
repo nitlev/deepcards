@@ -4,14 +4,10 @@ from io import StringIO
 import pytest
 
 from cards import Card, CardStack, Deck, Hand, Trick
-from commentators.gamecommentator import GameCommentator
-from commentators.roundcommentator import RoundCommentator
-from game.game import Game
-from game.round import Round
-from officials import TrickEvaluator, Referee
-from officials.distributor import Distributor
-from players.players import Player
-from players.team import Team
+from commentators import GameCommentator, RoundCommentator
+from game import Game, Round
+from officials import Distributor, TrickEvaluator, Referee
+from players import Player, Team
 
 
 def regex_builder(cardstackname):
@@ -260,9 +256,10 @@ class TestGame:
         revealed_card = self.game.perform_first_distribution_and_reveal_card()
         assert isinstance(revealed_card, Card)
 
-    def test_players_should_have_8_minus_n_cards_in_hand_after_first_distribution(self):
-        revealed_card = self.game.perform_first_distribution_and_reveal_card()
-        assert isinstance(revealed_card, Card)
+    def test_players_should_have_5_cards_in_hand_after_first_distribution(self):
+        _ = self.game.perform_first_distribution_and_reveal_card()
+        for player in self.game.players:
+            assert len(player.hand) == 5
 
     def test_deck_should_be_empty_after_distribution(self):
         self.game.distribute_cards_and_choose_trump()
@@ -373,55 +370,50 @@ class TestGameCommentator:
         distributor = Distributor()
         referee = Referee()
         self.game = Round(0, team1, team2, deck, evaluator, distributor, referee)
-        self.commentator = RoundCommentator(1)
+        self.output = StringIO()
+        self.commentator = RoundCommentator(1, stream=self.output)
 
     def test_commentator_should_introduce_game(self):
-        output = StringIO()
-        self.commentator.comment_start_of_game(self.game, out=output)
-        assert output.getvalue().strip() == """Game 0"""
+        self.commentator.comment_start_of_round(self.game)
+        assert self.output.getvalue().strip() == """Game 0"""
 
     def test_commentator_should_announce_cards(self):
-        output = StringIO()
         regex = re.compile(r"([\w]+ plays [\w]+ of [\w]+(, )*){4}.")
         self.game.distribute_cards_and_choose_trump()
         trick = self.game.play_one_turn()
-        self.commentator.comment_turn(self.game, trick, out=output)
-        comment = output.getvalue().strip()
+        self.commentator.comment_turn(self.game, trick)
+        comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
     def test_commentator_should_comment_start_of_turn(self):
-        output = StringIO()
         regex = re.compile(r"[\w]+ starts.")
         self.game.distribute_cards_and_choose_trump()
-        self.commentator.comment_start_of_turn(self.game, out=output)
-        comment = output.getvalue().strip()
+        self.commentator.comment_start_of_turn(self.game)
+        comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
     def test_commentator_should_comment_end_of_turn(self):
-        output = StringIO()
         regex = re.compile(r"[\w]+ wins.")
         self.game.distribute_cards_and_choose_trump()
         self.game.play_one_turn()
-        self.commentator.comment_end_of_turn(self.game, out=output)
-        comment = output.getvalue().strip()
+        self.commentator.comment_end_of_turn(self.game)
+        comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
     def test_commentator_should_comment_end_of_game(self):
-        output = StringIO()
         regex = re.compile(r"(Team \w+: \d{1,3} points.\n){2}Team \w+ wins!")
         self.game.distribute_cards_and_choose_trump()
         self.game.play()
         self.game.count_points()
-        self.commentator.comment_end_of_game(self.game, out=output)
-        comment = output.getvalue().strip()
+        self.commentator.comment_end_of_round(self.game)
+        comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
     def test_commentator_should_comment_distribution(self):
-        output = StringIO()
         regex = re.compile(r"Trump suit will be (Clubs|Hearts|Diamonds|Spades).")
         self.game.distribute_cards_and_choose_trump()
-        self.commentator.comment_distribution(self.game, out=output)
-        comment = output.getvalue().strip()
+        self.commentator.comment_distribution(self.game)
+        comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
 

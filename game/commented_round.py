@@ -6,7 +6,7 @@ class CommentedRound(AbstractRound):
     def __init__(self, round):
         self.round = round
         self.commentator = RoundCommentator()
-        self.commentator.comment_start_of_game(self.round)
+        self.commentator.comment_start_of_round(self.round)
 
     def play(self):
         for turn in range(8):
@@ -30,7 +30,7 @@ class CommentedRound(AbstractRound):
 
     def count_points(self):
         self.round.count_points()
-        self.commentator.comment_end_of_game(self.round)
+        self.commentator.comment_end_of_round(self.round)
 
     def distribute_cards_and_choose_trump(self):
         self.round.distribute_cards_and_choose_trump()

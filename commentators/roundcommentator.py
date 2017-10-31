@@ -4,57 +4,52 @@ from cards import Card
 
 
 class RoundCommentator:
-    def __init__(self, verbosity=1):
+    def __init__(self, verbosity=1, stream=None):
         self.verbosity = verbosity
+        self.stream = stream or sys.stdout
 
-    @staticmethod
-    def comment_start_of_game(game, out=sys.stdout):
-        out.write("\n")
-        out.write("Game {}".format(game.id))
-        out.write("\n")
+    def comment_start_of_round(self, round):
+        self.stream.write("\n")
+        self.stream.write("Game {}".format(round.id))
+        self.stream.write("\n")
 
-    @staticmethod
-    def comment_turn(game, trick, out=sys.stdout):
+    def comment_turn(self, round, trick):
         comments = []
         for i in range(4):
-            player = game.players[(game.last_trick_winner + i) % 4]
+            player = round.players[(round.last_trick_winner + i) % 4]
             card = trick[i]
             comments.append(
                 "{player} plays {card}".format(player=player, card=card))
-        out.write(", ".join(comments) + ".")
-        out.write("\n")
+        self.stream.write(", ".join(comments) + ".")
+        self.stream.write("\n")
 
-    @staticmethod
-    def comment_start_of_turn(game, out=sys.stdout):
-        out.write("{player} starts.".format(
-            player=game.players[game.last_trick_winner]))
-        out.write("\n")
+    def comment_start_of_turn(self, round):
+        self.stream.write("{player} starts.".format(
+            player=round.players[round.last_trick_winner]))
+        self.stream.write("\n")
 
-    @staticmethod
-    def comment_end_of_turn(game, out=sys.stdout):
-        out.write("{player} wins.".format(
-            player=game.players[game.last_trick_winner]))
-        out.write("\n")
+    def comment_end_of_turn(self, round):
+        self.stream.write("{player} wins.".format(
+            player=round.players[round.last_trick_winner]))
+        self.stream.write("\n")
 
-    @staticmethod
-    def comment_end_of_game(game, out=sys.stdout):
+    def comment_end_of_round(self, round):
         best_team = None
         best_score = 0
-        out.write("\n")
-        for team in game.teams:
+        self.stream.write("\n")
+        for team in round.teams:
             game_points = team.current_game_points
-            out.write(
+            self.stream.write(
                 "Team {team_id}: {points} points.".format(team_id=team.id,
                                                           points=game_points))
-            out.write("\n")
+            self.stream.write("\n")
             if game_points > best_score:
                 best_score = game_points
                 best_team = team.id
-        out.write("Team {team_id} wins!".format(team_id=best_team))
-        out.write("\n")
+        self.stream.write("Team {team_id} wins!".format(team_id=best_team))
+        self.stream.write("\n")
 
-    @staticmethod
-    def comment_distribution(game, out=sys.stdout):
-        out.write("Trump suit will be {suit}.".format(
-            suit=Card.suit_names[game.trump_suit]))
-        out.write("\n")
+    def comment_distribution(self, round):
+        self.stream.write("Trump suit will be {suit}.".format(
+            suit=Card.suit_names[round.trump_suit]))
+        self.stream.write("\n")

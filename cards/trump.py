@@ -6,11 +6,11 @@ class RankedCard(Card):
         Card.__init__(self, card.suit, card.value, card.owner)
         self.card = card
     
-    def is_higher_than(self, card2):
-        """Returns True if self > card2, else False.
-        card1 suit is supposed to be either from demanded suit or trump suit"""
-        win_by_trump = self.is_trump and not card2.is_trump
-        win_by_value = self.suit == card2.suit and self.rank > card2.rank
+    def is_higher_than(self, card):
+        """Returns True if self > card, else False.
+        self suit is supposed to be either from demanded suit or trump suit"""
+        win_by_trump = self.is_trump and not card.is_trump
+        win_by_value = self.suit == card.suit and self.rank > card.rank
         if win_by_trump:
             return True
         elif win_by_value:

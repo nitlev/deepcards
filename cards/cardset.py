@@ -54,7 +54,12 @@ class Hand(CardSet):
 
 
 class Trick(CardSet):
-    """Four or less distinct cards"""
+    """
+    Four or less distinct cards.
+
+    If cards are ranked, this class is also able to find the winning card of
+    the trick.
+    """
 
     def __init__(self, cards=None):
         CardSet.__init__(self, cards, 4)

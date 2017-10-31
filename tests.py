@@ -5,8 +5,8 @@ import pytest
 
 from cards import Card, CardStack, Deck, Hand, Trick, Trump, NonTrump, CardSet
 from cards.trump import RankedCard
-from commentators import GameCommentator, RoundCommentator
 from game import Game, Round
+from game.commentators import GameCommentator, RoundCommentator
 from officials import Distributor, Referee
 from players import Player, Team
 

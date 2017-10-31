@@ -1,4 +1,4 @@
-from commentators.game_commentator import GameCommentator
+from game.commentators import GameCommentator
 from .game import Game
 
 

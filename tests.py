@@ -3,10 +3,15 @@ from io import StringIO
 
 import pytest
 
-from actors import Player, Team, GameCommentator, GameNightCommentator
 from cards import Card, CardStack, Deck, Hand, Trick
-from game import Game, GameNight
-from officials import TrickEvaluator, Referee, Distributor
+from commentators.gamecommentator import GameCommentator
+from commentators.roundcommentator import RoundCommentator
+from game.game import Game
+from game.round import Round
+from officials import TrickEvaluator, Referee
+from officials.distributor import Distributor
+from players.players import Player
+from players.team import Team
 
 
 def regex_builder(cardstackname):
@@ -240,7 +245,7 @@ class TestGame:
         evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game = Game(0, team1, team2, deck, evaluator, distributor, referee, seed=36)
+        self.game = Round(0, team1, team2, deck, evaluator, distributor, referee, seed=36)
 
     def test_players_should_have_no_hand_at_beginning(self):
         for player in self.game.players:
@@ -367,8 +372,8 @@ class TestGameCommentator:
         evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game = Game(0, team1, team2, deck, evaluator, distributor, referee)
-        self.commentator = GameCommentator(1)
+        self.game = Round(0, team1, team2, deck, evaluator, distributor, referee)
+        self.commentator = RoundCommentator(1)
 
     def test_commentator_should_introduce_game(self):
         output = StringIO()
@@ -427,14 +432,14 @@ class TestGameNightCommentator:
         evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game_night = GameNight(team1, team2, evaluator, distributor, referee, verbosity=1)
-        self.commentator = GameNightCommentator(1)
+        self.game_night = Game(team1, team2, evaluator, distributor, referee, verbosity=1)
+        self.commentator = GameCommentator(1)
 
     def test_commentator_should_introduce_game_night(self):
         output = StringIO()
         regex = re.compile(r"(Team \w+: \w*, \w*.\n*){2}")
         self.game_night.play()
-        self.commentator.introduce_game_night(self.game_night, out=output)
+        self.commentator.introduce_game(self.game_night, out=output)
         comment = output.getvalue().strip()
         assert regex.match(comment) is not None
 
@@ -442,7 +447,7 @@ class TestGameNightCommentator:
         output = StringIO()
         regex = re.compile(r"(Team \w+: \d{1,4} points.\n){2}Team \w+ wins!")
         self.game_night.play()
-        self.commentator.comment_end_of_game_night(self.game_night, out=output)
+        self.commentator.comment_end_of_game(self.game_night, out=output)
         comment = output.getvalue().strip()
         assert regex.match(comment) is not None
 

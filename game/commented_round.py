@@ -1,4 +1,4 @@
-from commentators.roundcommentator import RoundCommentator
+from commentators.round_commentator import RoundCommentator
 from game.round import AbstractRound
 
 

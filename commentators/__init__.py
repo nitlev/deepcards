@@ -1,2 +1,2 @@
-from .gamecommentator import GameCommentator
-from .roundcommentator import RoundCommentator
+from .game_commentator import GameCommentator
+from .round_commentator import RoundCommentator

@@ -1,4 +1,4 @@
-from commentators.gamecommentator import GameCommentator
+from commentators.game_commentator import GameCommentator
 
 
 class CommentedGame(object):

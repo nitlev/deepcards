@@ -1,17 +1,15 @@
 from cards import Deck
-from officials import Evaluator, Referee, Distributor
+from officials import Referee, Distributor
 from players import Team
 from .commented_round import CommentedRound
 from .round import Round
 
 
 class Game:
-    def __init__(self, team1: Team, team2: Team, evaluator: Evaluator,
-                 distributor: Distributor, referee: Referee,
+    def __init__(self, team1: Team, team2: Team, distributor: Distributor, referee: Referee,
                  verbosity: int):
         self.teams = [team1, team2]
         self.which_player_starts = 0
-        self.evaluator = evaluator
         self.distributor = distributor
         self.referee = referee
         self.number_of_games_played = 0
@@ -32,8 +30,9 @@ class Game:
     def new_round(self):
         deck = Deck()
         round = Round(self.number_of_games_played, self.teams[0],
-                      self.teams[1], deck, self.evaluator,
-                      self.distributor, self.referee,
+                      self.teams[1], deck,
+                      self.distributor,
+                      self.referee,
                       self.number_of_games_played % 4)
         if self.verbosity == 0:
             return round

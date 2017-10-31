@@ -12,8 +12,7 @@ def main():
     distributor = Distributor()
     trick_evaluator = TrickEvaluator()
     referee = Referee()
-    game = Game(team0, team1, trick_evaluator,
-                distributor, referee, verbosity=1)
+    game = Game(team0, team1, distributor, referee, verbosity=1)
     commented_game = CommentedGame(game)
     commented_game.start()
     commented_game.play()

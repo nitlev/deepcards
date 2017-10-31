@@ -20,6 +20,16 @@ class CardSet:
     def remove(self, card):
         self.cards.remove(card)
 
+    def to_ranked(self, suit):
+        new_cardset = self.__class__()
+        for card in self.cards:
+            new_cardset.add_card(card.to_ranked(suit))
+        return new_cardset
+
+    @property
+    def total_points(self):
+        return sum([card.points for card in self.cards])
+
     def __getitem__(self, item):
         return self.cards[item]
 
@@ -48,3 +58,14 @@ class Trick(CardSet):
 
     def __init__(self, cards=None):
         CardSet.__init__(self, cards, 4)
+
+    @property
+    def winner(self):
+        first_card = self.cards[0]
+        demanded_suit = first_card.suit
+        winner_card = first_card
+        for i, card in enumerate(self.cards[1:]):
+            if (card.is_trump or card.suit == demanded_suit) and \
+                    card.is_higher_than(winner_card):
+                winner_card = card
+        return winner_card

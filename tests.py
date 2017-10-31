@@ -3,10 +3,11 @@ from io import StringIO
 
 import pytest
 
-from cards import Card, CardStack, Deck, Hand, Trick
+from cards import Card, CardStack, Deck, Hand, Trick, Trump, NonTrump, CardSet
+from cards.trump import RankedCard
 from commentators import GameCommentator, RoundCommentator
 from game import Game, Round
-from officials import Distributor, TrickEvaluator, Referee
+from officials import Distributor, Referee
 from players import Player, Team
 
 
@@ -40,6 +41,31 @@ class TestCards:
         assert repr(Card("D", "K")) == "King of Diamonds"
         assert repr(Card("H", "Q")) == "Queen of Hearts"
         assert repr(Card("S", "J")) == "Jack of Spades"
+
+    def test_cards_can_cast_themselves_to_ranked_cards(self):
+        card = Card("C", "A")
+        ranked_card = card.to_ranked("C")
+        assert isinstance(ranked_card, Trump)
+        assert ranked_card == Trump(card)
+        card = Card("H", "A")
+        ranked_card = card.to_ranked("C")
+        assert isinstance(ranked_card, NonTrump)
+        assert ranked_card == NonTrump(card)
+
+    def test_with_owner_return_new_card_with_owner(self):
+        player = Player()
+        card = Card("C", "A")
+        new_card = card.with_owner(player)
+        assert new_card.owner is player
+
+
+class TestCardSet:
+    def test_set_of_ranked_cards_can_add_points(self):
+        cardset = CardSet()
+        cardset.add_card(Trump(Card("C", "J")))
+        cardset.add_card(NonTrump(Card("H", "J")))
+        cardset.add_card(NonTrump(Card("D", "A")))
+        assert cardset.total_points == 20 + 2 + 11
 
 
 class TestCardStack:
@@ -142,6 +168,13 @@ class TestHand:
         regex = regex_builder("Hand")
         assert regex.match(str(hand))
 
+    def test_hand_can_cast_itself_to_new_ranked(self):
+        hand = Hand()
+        hand.add_card(Card("C", "A"))
+        hand.add_card(Card("D", "A"))
+        new_hand = hand.to_ranked("C")
+        for card in new_hand:
+            assert isinstance(card, RankedCard)
 
 class TestPlayer:
     def test_player_should_introduce_himself_politely(self):
@@ -205,6 +238,27 @@ class TestPlayer:
         player.play(trick, 0)
         assert len(trick) == 1
 
+    def test_player_should_have_only_ranked_cards_after_setting_trump(self):
+        player = Player()
+        cards = [Card("C", "S"), Card("D", "S"), Card("H", "S"),
+                 Card("S", "S"), Card("C", "E"), Card("D", "T"),
+                 Card("H", "J"), Card("S", "Q")]
+        for card in cards:
+            player.add_card_to_hand(card)
+        player.set_trump_suit("C")
+        for new_card in player.hand:
+            assert isinstance(new_card, RankedCard)
+
+    def test_player_should_set_owner_on_his_cards(self):
+        player = Player()
+        cards = [Card("C", "S"), Card("D", "S"), Card("H", "S"),
+                 Card("S", "S"), Card("C", "E"), Card("D", "T"),
+                 Card("H", "J"), Card("S", "Q")]
+        for card in cards:
+            player.add_card_to_hand(card)
+        for card in player.hand:
+            assert card.owner is player
+
 
 class TestDistributor:
     def setup_method(self, method):
@@ -233,129 +287,91 @@ class TestDistributor:
         assert len(self.deck) == 12
 
 
-class TestGame:
+class TestRound:
     def setup_method(self, method):
         team1 = Team(0, Player("Alex"), Player("Thibaud"))
         team2 = Team(1, Player("Marie"), Player("Veltin"))
         deck = Deck()
-        evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game = Round(0, team1, team2, deck, evaluator, distributor, referee, seed=36)
+        self.round = Round(0, team1, team2, deck, distributor,
+                           referee, seed=36)
 
     def test_players_should_have_no_hand_at_beginning(self):
-        for player in self.game.players:
+        for player in self.round.players:
             assert len(player.hand) == 0
 
     def test_players_should_have_8_cards_after_distribution(self):
-        self.game.distribute_cards_and_choose_trump()
-        for player in self.game.players:
+        self.round.distribute_cards_and_choose_trump()
+        for player in self.round.players:
             assert len(player.hand) == 8
 
+    def test_all_cards_should_be_ranked_after_distribution(self):
+        self.round.distribute_cards_and_choose_trump()
+        for player in self.round.players:
+            for card in player.hand:
+                assert isinstance(card, RankedCard)
+
     def test_first_distribution_should_reveal_card(self):
-        revealed_card = self.game.perform_first_distribution_and_reveal_card()
+        revealed_card = self.round.perform_first_distribution_and_reveal_card()
         assert isinstance(revealed_card, Card)
 
     def test_players_should_have_5_cards_in_hand_after_first_distribution(self):
-        _ = self.game.perform_first_distribution_and_reveal_card()
-        for player in self.game.players:
+        _ = self.round.perform_first_distribution_and_reveal_card()
+        for player in self.round.players:
             assert len(player.hand) == 5
 
     def test_deck_should_be_empty_after_distribution(self):
-        self.game.distribute_cards_and_choose_trump()
-        assert len(self.game.deck) == 0
+        self.round.distribute_cards_and_choose_trump()
+        assert len(self.round.deck) == 0
 
     def test_players_should_have_8_minus_n_cards_in_hand_after_n_turns(self):
-        self.game.distribute_cards_and_choose_trump()
+        self.round.distribute_cards_and_choose_trump()
         for i in range(8):
-            self.game.play_one_turn()
-            for player in self.game.players:
+            self.round.play_one_turn()
+            for player in self.round.players:
                 assert len(player.hand) == 8 - (i + 1)
 
     def test_teams_should_have_32_cards_total_after_game_has_been_played(self):
-        self.game.distribute_cards_and_choose_trump()
-        self.game.play()
-        assert len(self.game.get_team_by_id(0).won_cards) + len(self.game.get_team_by_id(1).won_cards) == 32
+        self.round.distribute_cards_and_choose_trump()
+        print(self.round.get_team_by_id(0).player1.hand[0].owner)
+        self.round.play()
+        assert len(self.round.get_team_by_id(0).won_cards) + len(self.round.get_team_by_id(1).won_cards) == 32
 
     def test_total_points_at_the_end_should_be_162(self):
-        self.game.distribute_cards_and_choose_trump()
-        self.game.play()
-        self.game.count_points()
-        assert sum([team.current_game_points for team in self.game.teams]) == 162
+        self.round.distribute_cards_and_choose_trump()
+        self.round.play()
+        self.round.count_points()
+        assert sum([team.current_game_points for team in self.round.teams]) == 162
 
     def test_play_should_not_fail(self):
-        self.game.distribute_cards_and_choose_trump()
-        assert self.game.play() == 0
+        self.round.distribute_cards_and_choose_trump()
+        assert self.round.play() == 0
 
 
-class TestTrickEvaluator:
-    def setup_method(self, method):
-        self.evaluator = TrickEvaluator("C")  # Trump suit is Clubs
-
-    def test_get_trump_rank(self):
-        assert self.evaluator.get_rank(Card("C", "S")) == 0
-        assert self.evaluator.get_rank(Card("C", "E")) == 1
-        assert self.evaluator.get_rank(Card("C", "Q")) == 2
-        assert self.evaluator.get_rank(Card("C", "K")) == 3
-        assert self.evaluator.get_rank(Card("C", "T")) == 4
-        assert self.evaluator.get_rank(Card("C", "A")) == 5
-        assert self.evaluator.get_rank(Card("C", "N")) == 6
-        assert self.evaluator.get_rank(Card("C", "J")) == 7
-
-    def test_get_non_trump_rank(self):
-        assert self.evaluator.get_rank(Card("D", "S")) == 0
-        assert self.evaluator.get_rank(Card("D", "E")) == 1
-        assert self.evaluator.get_rank(Card("D", "N")) == 2
-        assert self.evaluator.get_rank(Card("D", "J")) == 3
-        assert self.evaluator.get_rank(Card("D", "Q")) == 4
-        assert self.evaluator.get_rank(Card("D", "K")) == 5
-        assert self.evaluator.get_rank(Card("D", "T")) == 6
-        assert self.evaluator.get_rank(Card("D", "A")) == 7
-
-    def test_highest_rank_should_win_when_same_suit(self):
-        assert self.evaluator.is_higher(Card("D", "T"), Card("D", "S"))
-        assert self.evaluator.is_higher(Card("D", "A"), Card("D", "S"))
-        assert self.evaluator.is_higher(Card("H", "K"), Card("H", "Q"))
-        assert self.evaluator.is_higher(Card("C", "T"), Card("C", "Q"))
-        assert self.evaluator.is_higher(Card("H", "K"), Card("H", "Q"))
-
-    def test_trump_value_should_win_against_non_trump(self):
-        assert self.evaluator.is_higher(Card("C", "E"), Card("D", "S"))
-        assert self.evaluator.is_higher(Card("C", "S"), Card("H", "A"))
-        assert self.evaluator.is_higher(Card("C", "K"), Card("S", "Q"))
-
+class TestTrick:
     def test_winner_should_return_correct_index_without_offset(self):
-        assert self.evaluator.winner(Trick(cards=[Card("C", "E"), Card("C", "T"), Card("C", "J"), Card("C", "Q")])) == 2
-        assert self.evaluator.winner(Trick(cards=[Card("C", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])) == 0
-        assert self.evaluator.winner(Trick(cards=[Card("D", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])) == 1
-        assert self.evaluator.winner(Trick(cards=[Card("D", "E"), Card("C", "T"), Card("C", "J"), Card("H", "Q")])) == 2
-        assert self.evaluator.winner(Trick(cards=[Card("D", "E"), Card("H", "T"), Card("S", "J"), Card("H", "Q")])) == 0
-
-    def test_winner_should_return_correct_index_with_offset(self):
-        trick1 = Trick(cards=[Card("C", "E"), Card("C", "T"), Card("C", "J"), Card("C", "Q")])
-        assert self.evaluator.winner(trick1, who_started=1) == 3
-        trick2 = Trick(cards=[Card("C", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])
-        assert self.evaluator.winner(trick2, who_started=2) == 2
-        trick3 = Trick(cards=[Card("D", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")])
-        assert self.evaluator.winner(trick3, who_started=3) == 0
-        trick4 = Trick(cards=[Card("D", "E"), Card("C", "T"), Card("C", "J"), Card("H", "Q")])
-        assert self.evaluator.winner(trick4, who_started=1) == 3
-        trick5 = Trick(cards=[Card("D", "E"), Card("H", "T"), Card("S", "J"), Card("H", "Q")])
-        assert self.evaluator.winner(trick5, who_started=3) == 3
+        trick = Trick(cards=[Card("C", "E"), Card("C", "T"), Card("C", "J"), Card("C", "Q")]).to_ranked("C")
+        assert trick.winner == Card("C", "J")
+        trick = Trick(cards=[Card("C", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")]).to_ranked("C")
+        assert trick.winner == Card("C", "E")
+        trick = Trick(cards=[Card("D", "E"), Card("D", "T"), Card("H", "J"), Card("S", "Q")]).to_ranked("C")
+        assert trick.winner == Card("D", "T")
+        trick = Trick(cards=[Card("D", "E"), Card("C", "T"), Card("C", "J"), Card("H", "Q")]).to_ranked("C")
+        assert trick.winner == Card("C", "J")
+        trick = Trick(cards=[Card("D", "E"), Card("H", "T"), Card("S", "J"), Card("H", "Q")]).to_ranked("C")
+        assert trick.winner == Card("D", "E")
 
 
 class TestReferee:
     def setup_method(self, method):
-        self.referee = Referee("C")
-
-    def test_referee_should_be_good_at_math(self):
-        for suit in ["D", "H", "S"]:
-            assert self.referee.cards_points([Card(suit, "E"), Card(suit, "N"), Card(suit, "J")]) == 2
-        assert self.referee.cards_points([Card("C", "E"), Card("C", "N"), Card("C", "J")]) == 34
+        self.referee = Referee()
 
     def test_referee_should_compute_team_score(self):
         team = Team(0, Player(), Player())
-        team.get_cards(Trick([Card("C", "E"), Card("C", "N"), Card("C", "J")]))
+        cards = [Card("C", "E"), Card("C", "N"), Card("C", "J")]
+        trick = Trick(cards).to_ranked("C")
+        team.get_cards(trick)
         assert self.referee.count_team_points(team) == 34
         team.started = True
         assert self.referee.count_team_points(team) == 0
@@ -366,10 +382,9 @@ class TestGameCommentator:
         team1 = Team(0, Player("Alex"), Player("Thibaud"))
         team2 = Team(1, Player("Marie"), Player("Veltin"))
         deck = Deck()
-        evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game = Round(0, team1, team2, deck, evaluator, distributor, referee)
+        self.game = Round(0, team1, team2, deck, distributor, referee)
         self.output = StringIO()
         self.commentator = RoundCommentator(1, stream=self.output)
 
@@ -414,10 +429,9 @@ class TestGameNightCommentator:
     def setup_method(self, method):
         team1 = Team(0, Player("Alex"), Player("Thibaud"))
         team2 = Team(1, Player("Marie"), Player("Veltin"))
-        evaluator = TrickEvaluator()
         distributor = Distributor()
         referee = Referee()
-        self.game_night = Game(team1, team2, evaluator, distributor, referee, verbosity=1)
+        self.game_night = Game(team1, team2, distributor, referee, verbosity=1)
         self.commentator = GameCommentator(1)
 
     def test_commentator_should_introduce_game_night(self):
@@ -470,3 +484,57 @@ class TestTeam:
         assert self.team.player2.teamID == 0
         assert self.team2.player1.teamID == 1
         assert self.team2.player2.teamID == 1
+
+
+class TestTrumpCard:
+    def test_get_trump_rank(self):
+        assert Trump(Card("C", "S")).rank == 0
+        assert Trump(Card("C", "E")).rank == 1
+        assert Trump(Card("C", "Q")).rank == 2
+        assert Trump(Card("C", "K")).rank == 3
+        assert Trump(Card("C", "T")).rank == 4
+        assert Trump(Card("C", "A")).rank == 5
+        assert Trump(Card("C", "N")).rank == 6
+        assert Trump(Card("C", "J")).rank == 7
+
+    def test_get_non_trump_rank(self):
+        assert NonTrump(Card("D", "S")).rank == 0
+        assert NonTrump(Card("D", "E")).rank == 1
+        assert NonTrump(Card("D", "N")).rank == 2
+        assert NonTrump(Card("D", "J")).rank == 3
+        assert NonTrump(Card("D", "Q")).rank == 4
+        assert NonTrump(Card("D", "K")).rank == 5
+        assert NonTrump(Card("D", "T")).rank == 6
+        assert NonTrump(Card("D", "A")).rank == 7
+
+    def test_get_trump_points(self):
+        assert Trump(Card("C", "S")).points == 0
+        assert Trump(Card("C", "E")).points == 0
+        assert Trump(Card("C", "Q")).points == 3
+        assert Trump(Card("C", "K")).points == 4
+        assert Trump(Card("C", "T")).points == 10
+        assert Trump(Card("C", "A")).points == 11
+        assert Trump(Card("C", "N")).points == 14
+        assert Trump(Card("C", "J")).points == 20
+
+    def test_get_non_trump_points(self):
+        assert NonTrump(Card("D", "S")).points == 0
+        assert NonTrump(Card("D", "E")).points == 0
+        assert NonTrump(Card("D", "N")).points == 0
+        assert NonTrump(Card("D", "J")).points == 2
+        assert NonTrump(Card("D", "Q")).points == 3
+        assert NonTrump(Card("D", "K")).points == 4
+        assert NonTrump(Card("D", "T")).points == 10
+        assert NonTrump(Card("D", "A")).points == 11
+
+    def test_highest_rank_should_win_when_same_suit(self):
+        assert NonTrump(Card("D", "T")).is_higher_than(NonTrump(Card("D", "S")))
+        assert NonTrump(Card("D", "A")).is_higher_than(NonTrump(Card("D", "S")))
+        assert NonTrump(Card("H", "K")).is_higher_than(NonTrump(Card("H", "Q")))
+        assert Trump(Card("C", "T")).is_higher_than(Trump(Card("C", "Q")))
+        assert NonTrump(Card("H", "K")).is_higher_than(NonTrump(Card("H", "Q")))
+
+    def test_trump_value_should_win_against_non_trump(self):
+        assert Trump(Card("C", "E")).is_higher_than(NonTrump(Card("D", "S")))
+        assert Trump(Card("C", "S")).is_higher_than(NonTrump(Card("H", "A")))
+        assert Trump(Card("C", "K")).is_higher_than(NonTrump(Card("S", "Q")))

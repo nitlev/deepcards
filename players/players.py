@@ -56,10 +56,13 @@ class Player:
         return True
 
     def add_card_to_hand(self, card):
-        self.hand.add_card(card)
+        self.hand.add_card(card.with_owner(self))
 
     def set_team_id(self, id):
         self.teamID = id
+
+    def set_trump_suit(self, suit):
+        self.hand = self.hand.to_ranked(suit)
 
     def __str__(self):
         return self.name

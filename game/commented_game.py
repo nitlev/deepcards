@@ -1,8 +1,9 @@
 from commentators.game_commentator import GameCommentator
+from .game import Game
 
 
 class CommentedGame(object):
-    def __init__(self, game):
+    def __init__(self, game: Game):
         self.game = game
         self.commentator = GameCommentator()
 

@@ -23,11 +23,6 @@ class RoundCommentator:
         self.stream.write(", ".join(comments) + ".")
         self.stream.write("\n")
 
-    def comment_start_of_turn(self, round):
-        self.stream.write("{player} starts.".format(
-            player=round.players[round.last_trick_winner]))
-        self.stream.write("\n")
-
     def comment_end_of_turn(self, round):
         self.stream.write("{player} wins.".format(
             player=round.players[round.last_trick_winner]))

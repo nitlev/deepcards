@@ -18,7 +18,6 @@ class CommentedRound(AbstractRound):
         return 0
 
     def play_one_turn(self):
-        self.commentator.comment_start_of_turn(self.round)
         trick = self.round.play_one_turn()
         self.commentator.comment_turn(self.round, trick)
         return trick

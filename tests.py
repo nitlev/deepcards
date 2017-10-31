@@ -385,13 +385,6 @@ class TestGameCommentator:
         comment = self.output.getvalue().strip()
         assert regex.match(comment) is not None
 
-    def test_commentator_should_comment_start_of_turn(self):
-        regex = re.compile(r"[\w]+ starts.")
-        self.game.distribute_cards_and_choose_trump()
-        self.commentator.comment_start_of_turn(self.game)
-        comment = self.output.getvalue().strip()
-        assert regex.match(comment) is not None
-
     def test_commentator_should_comment_end_of_turn(self):
         regex = re.compile(r"[\w]+ wins.")
         self.game.distribute_cards_and_choose_trump()
